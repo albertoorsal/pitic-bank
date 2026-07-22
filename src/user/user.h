@@ -15,7 +15,8 @@ enum {
     USER_NAME_MAX = 128,
     USER_EMAIL_MAX = 256,
     USER_PASSWORD_MAX = 128,
-    USER_ROLE_MAX = 32
+    USER_ROLE_MAX = 32,
+    USER_RFC_MAX = 13
 };
 
 /* A single doamin entity. id == 0 means "not yet persisted" */
@@ -25,6 +26,7 @@ typedef struct {
     char email[USER_EMAIL_MAX];
     char password_hash[USER_PASSWORD_MAX];
     char role[USER_ROLE_MAX];
+    char rfc[USER_RFC_MAX];
 } User;
 
 

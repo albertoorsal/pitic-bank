@@ -44,7 +44,7 @@ void user_service_init(UserService *service, const UserRepository *repository);
  * at the storage layer (pgcrypto) and never kept in memory as `created`. */
 ServiceStatus user_service_register(
     const UserService *service,
-    const char *name, const char *email, const char *password,
+    const char *name, const char *email, const char *password, const char *rfc,
     User *created
 );
 

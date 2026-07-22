@@ -83,7 +83,7 @@ void user_service_init(UserService *service, const UserRepository *repository){
  
 ServiceStatus user_service_register(
     const UserService *service,
-    const char *name, const char *email, const char *password,
+    const char *name, const char *email, const char *password, const char *rfc,
     User *created
 )
 {
@@ -100,6 +100,7 @@ ServiceStatus user_service_register(
     User input = { .id = 0 };
     snprintf(input.name, sizeof(input.name), "%s", name);
     snprintf(input.email, sizeof(input.email), "%s", email);
+    snprintf(input.rfc, sizeof(input.rfc), "%s", rfc);
     /* Carried as plaintext only long enough for the repository to hand it to
      * pgcrypto's crypt(); the returned `created` row holds the real hash. */
     snprintf(input.password_hash, sizeof(input.password_hash), "%s", password);

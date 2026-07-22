@@ -33,15 +33,17 @@ static void action_create(const UserService *service)
     char name[INPUT_MAX];
     char email[INPUT_MAX];
     char password[INPUT_MAX];
+    char rfc[INPUT_MAX];
 
     if (read_line("Name    : ", name, sizeof(name)) != 0 ||
         read_line("Email   : ", email, sizeof(email)) != 0 ||
-        read_line("Password: ", password, sizeof(password)) != 0) {
+        read_line("Password: ", password, sizeof(password)) != 0 ||
+        read_line("RFC: ", rfc, sizeof(rfc))) {
         return;
     }
 
     User created;
-    ServiceStatus status = user_service_register(service, name, email, password, &created);
+    ServiceStatus status = user_service_register(service, name, email, password, rfc, &created);
 
     if (status == SERVICE_OK) {
         printf("  + created:\n");
@@ -93,7 +95,7 @@ static void print_menu(void) {
 }
 
 static void print_logged_admin_menu(void)
-{   
+{
     printf("\n"
         "   Hello, Welcome to Pitic Bank Terminal System Admin Panel\n"
         "   --------------------------------------------\n"
