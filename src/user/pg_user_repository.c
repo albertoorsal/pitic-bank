@@ -15,11 +15,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* PostgreSQL SQLSTATE for a unique-constraint violation. */
-#define SQLSTATE_UNIQUE_VIOLATION "23505"
-
 /* colmun ordering shared by every SELECT/RETURNING statement below */
-enum { COL_ID = 0, COL_NAME = 1, COL_EMAIL = 2, COL_PASSWORD_HASH = 3, COL_ROLE = 4 };
+enum { COL_ID = 0, COL_NAME = 1, COL_EMAIL = 2, COL_PASSWORD_HASH = 3, COL_ROLE = 4, COL_RFC = 5 };
 
 /* Private helpers*/
 
@@ -40,29 +37,9 @@ static void row_to_user(const PGresult *result, int row, User *out)
     snprintf(out->role, sizeof(out->role), "%s",
         PQgetvalue((PGresult *)result, row, COL_ROLE)
     );
-}
-
-
-/* Map a failed PGResult to a RepoStatus and log driver's message. */ 
-static RepoStatus classify_failure(PGconn *conn, PGresult *result)
-{
-    const char *sqlstate = PQresultErrorField(result, PG_DIAG_SQLSTATE);
-
-    if (sqlstate != NULL && strcmp(sqlstate, SQLSTATE_UNIQUE_VIOLATION) == 0)
-    {
-        return REPO_CONFLICT;
-    }
-
-    fprintf(stderr, "[pg] query failed: %s", PQerrorMessage(conn));
-    return REPO_ERROR;
-}
-
-
-/* Render a long id as text paramerter. `buffer` must hold >= 32 chars */
-static const char *id_param(long id, char *buffer, size_t size)
-{
-    snprintf(buffer, size, "%ld", id);
-    return buffer;    
+    snprintf(out->rfc, sizeof(out->rfc), "%s",
+        PQgetisnull((PGresult *)result, row, COL_RFC) ? "" : PQgetvalue((PGresult *)result, row, COL_RFC)
+    );
 }
 
 /** CRUD OPERATIONS */
@@ -70,13 +47,13 @@ static RepoStatus pg_create(void *self, const User *input, User *created)
 {
     PGconn *conn = self;
     const char *sql =
-        "INSERT INTO users (name, email, password_hash, role) "
-        "VALUES ($1, $2, crypt($3, gen_salt('bf')), $4) "
-        "RETURNING id, name, email, password_hash, role";
+        "INSERT INTO users (name, email, password_hash, role, rfc) "
+        "VALUES ($1, $2, crypt($3, gen_salt('bf')), $4, NULLIF($5, '')) "
+        "RETURNING id, name, email, password_hash, role, rfc";
     const char *role = (input->role[0] != '\0') ? input->role : "customer";
-    const char *params[] = { input->name, input->email, input->password_hash, role };
+    const char *params[] = { input->name, input->email, input->password_hash, role, input->rfc };
 
-    PGresult *result = PQexecParams(conn, sql, 4, NULL, params, NULL, NULL, 0);
+    PGresult *result = PQexecParams(conn, sql, 5, NULL, params, NULL, NULL, 0);
 
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
     {
@@ -95,7 +72,7 @@ static RepoStatus pg_find_by_id(void *self, long id, User *out)
 {
     PGconn *conn = self;
     char id_text[32];
-    const char *sql = "SELECT id, name, email, password_hash, role FROM users WHERE id = $1";
+    const char *sql = "SELECT id, name, email, password_hash, role, rfc FROM users WHERE id = $1";
     const char *params[] = { id_param(id, id_text, sizeof(id_text)) };
 
     PGresult *result = PQexecParams(conn, sql, 1, NULL, params, NULL, NULL, 0);
@@ -121,7 +98,7 @@ static RepoStatus pg_find_by_id(void *self, long id, User *out)
 static RepoStatus pg_find_by_email(void *self, const char *email, User *out)
 {
     PGconn *conn = self;
-    const char *sql = "SELECT id, name, email, password_hash, role FROM users WHERE email = $1";
+    const char *sql = "SELECT id, name, email, password_hash, role, rfc FROM users WHERE email = $1";
     const char *params[] = { email };
 
     PGresult *result = PQexecParams(conn, sql, 1, NULL, params, NULL, NULL, 0);
@@ -152,7 +129,7 @@ static RepoStatus pg_verify_credentials(void *self, const char *email, const cha
 {
     PGconn *conn = self;
     const char *sql =
-        "SELECT id, name, email, password_hash, role FROM users "
+        "SELECT id, name, email, password_hash, role, rfc FROM users "
         "WHERE email = $1 AND password_hash = crypt($2, password_hash)";
     const char *params[] = { email, password };
 
@@ -179,7 +156,7 @@ static RepoStatus pg_verify_credentials(void *self, const char *email, const cha
 static RepoStatus pg_find_all(void *self, UserList *out)
 {
     PGconn *conn = self;
-    const char *sql = "SELECT id, name, email, password_hash, role FROM users ORDER BY id";
+    const char *sql = "SELECT id, name, email, password_hash, role, rfc FROM users ORDER BY id";
     PGresult *result = PQexecParams(conn, sql, 0, NULL, NULL, NULL, NULL, 0);
  
 

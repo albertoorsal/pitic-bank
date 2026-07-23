@@ -11,6 +11,10 @@
 
 #include "user/user_service.h"
 #include "user/pg_user_repository.h"
+#include "accounts/account_service.h"
+#include "accounts/pg_account_repository.h"
+#include "transfers/transfer_service.h"
+#include "transfers/pg_transfer_repository.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -40,17 +44,50 @@ int main(int argc, char **argv)
 
     const char *conn_info = resolve_conn_info(argc, argv);
 
-    UserRepository repository;
-    if (pg_user_repository_create(conn_info, &repository) != REPO_OK) {
+
+    // Init all repositories
+    UserRepository user_repository;
+    if (pg_user_repository_create(conn_info, &user_repository) != REPO_OK) {
         fprintf(stderr, "Could not open the user store. Check DATABASE_URL.\n");
         return EXIT_FAILURE;
     }
 
-    UserService service;
-    user_service_init(&service, &repository);
+    AccountRepository account_repository;
+    if (pg_account_repository_create(conn_info, &account_repository) != REPO_OK) {
+        fprintf(stderr, "Could not open the account store. Check DATABASE_URL.\n");
+        repo_destroy(&user_repository);
+        return EXIT_FAILURE;
+    }
 
-    int exit_code = cli_run(&service);
+    TransferRepository transfer_repository;
+    if (pg_transfer_repository_create(conn_info, &transfer_repository) != REPO_OK) {
+        fprintf(stderr, "Could not open the transfer store. Check DATABASE_URL.\n");
+        repo_destroy(&user_repository);
+        account_repo_destroy(&account_repository);
+        return EXIT_FAILURE;
+    }
 
-    repo_destroy(&repository);
+
+    // Init Services
+    UserService user_service;
+    user_service_init(&user_service, &user_repository);
+
+    AccountService account_service;
+    account_service_init(&account_service, &account_repository);
+
+    TransferService transfer_service;
+    transfer_service_init(&transfer_service, &transfer_repository);
+
+    AppContext app = {
+        .users = &user_service,
+        .accounts = &account_service,
+        .transfers = &transfer_service
+    };
+
+    int exit_code = cli_run(&app);
+
+    repo_destroy(&user_repository);
+    account_repo_destroy(&account_repository);
+    transfer_repo_destroy(&transfer_repository);
     return exit_code;
 }

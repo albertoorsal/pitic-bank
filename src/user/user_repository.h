@@ -9,17 +9,8 @@
 #define CUSTOMER_REPOSITORY_H
 
 #include "user.h"
+#include "generic/repository.h"
 
-/**
- * Outcome of a repository operation. Callers branch on this, never on errno
- *   or drive-specific codes, keeping them decoupled from the backend,
- */
-typedef enum {
-    REPO_OK,
-    REPO_NOT_FOUND,
-    REPO_CONFLICT,
-    REPO_ERROR
-} RepoStatus;
 
 typedef struct UserRepository UserRepository;
 
@@ -71,8 +62,6 @@ RepoStatus repo_remove(const UserRepository *repo, long id);
 void       repo_destroy(UserRepository *repo);
 
 
-/** Human-readable label for a status, for loggin/UI */
-const char *repo_status_text(RepoStatus status);
 
 
 #endif /* USER_REPOSITORY_H */

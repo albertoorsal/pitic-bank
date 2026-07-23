@@ -35,14 +35,3 @@ void repo_destroy(UserRepository *repo) {
         return repo->destroy(repo->self);
     }
 }
-
-
-const char *repo_status_text(RepoStatus status) {
-    switch (status){
-        case REPO_OK: return "OK";
-        case REPO_NOT_FOUND: return "not found";
-        case REPO_CONFLICT: return "conflict (email already exists)";
-        case REPO_ERROR: return "storage error";
-    }
-    return "unknow status";
-}
